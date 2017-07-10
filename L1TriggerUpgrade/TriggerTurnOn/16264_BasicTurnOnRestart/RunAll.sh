@@ -3,7 +3,7 @@
 mkdir -p Result/
 mkdir -p Result/Combined/
 
-for Sample in `ls Samples/ | grep Hgg`
+for Sample in `ls Samples/ | grep WToEnu | grep NoIso`
 do
    echo Start processing sample $Sample
    mkdir -p Result/$Sample
@@ -15,7 +15,8 @@ do
       ./RunTurnOn Samples/$Sample/$File Result/$Sample/$File 2>&1 | grep -v L1Classes_rdict.pcm
    done
 
-   hadd -f Result/Combined/${Sample}.root Result/$Sample/*
+   hadd -f Result/Combined/${Sample}.root Result/$Sample/*root
+   rm Result/$Sample/*root
 
    echo
 done
