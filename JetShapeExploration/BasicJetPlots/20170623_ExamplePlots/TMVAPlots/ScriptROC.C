@@ -156,7 +156,6 @@
 
 		Legend->Clear();
 	}//end of method cycle
-	input->Delete("*;*");
 	curves.clear();
 	legends.clear();
 	input->Close();
