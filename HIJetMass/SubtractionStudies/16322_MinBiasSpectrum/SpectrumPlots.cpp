@@ -55,10 +55,17 @@ int main(int argc, char *argv[])
 
    TTree Tree("Tree", "Tree");
 
-   double rho, eta, pt;
+   long long event;
+   double centrality;
+   double rho, eta, phi, pt;
+   int type;
+   Tree.Branch("Event", &event, "Event/L");
+   Tree.Branch("Centrality", &centrality, "Centrality/D");
    Tree.Branch("Rho", &rho, "Rho/D");
    Tree.Branch("Eta", &eta, "Eta/D");
+   Tree.Branch("Phi", &phi, "Phi/D");
    Tree.Branch("PT", &pt, "PT/D");
+   Tree.Branch("ID", &type, "ID/I");
 
    int EntryCount = MHiEvent.Tree->GetEntries();
    ProgressBar Bar(cout, EntryCount);
@@ -77,12 +84,15 @@ int main(int argc, char *argv[])
       MPF.GetEntry(iEntry);
       MRho.GetEntry(iEntry);
 
+      event = MHiEvent.Event;
+
       HN.Fill(0);
 
       double EventRho = -1;
       if(MRho.EtaMax->size() > 0 && MRho.Rho->size() > 0)
          EventRho = GetRho(MRho.EtaMax, MRho.Rho, 0);
 
+      centrality = GetCentrality(MHiEvent.hiBin);
       rho = EventRho;
 
       for(int i = 0; i < (int)MPF.ID->size(); i++)
@@ -90,7 +100,9 @@ int main(int argc, char *argv[])
          HRhoEta.Fill(EventRho, (*MPF.Eta)[i]);
 
          eta = (*MPF.Eta)[i];
+         phi = (*MPF.Phi)[i];
          pt = (*MPF.PT)[i];
+         type = (*MPF.ID)[i];
 
          if(eta < 1.3 && eta > -1.3)
             Tree.Fill();
