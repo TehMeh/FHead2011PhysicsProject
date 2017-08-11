@@ -18,7 +18,11 @@ using namespace std;
 void DataAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFile &OutputFile, HiEventTreeMessenger &MHiEvent, JetTreeMessenger &MJet, PFTreeMessenger &MPF, SkimTreeMessenger &MSkim, TriggerTreeMessenger &MHLT, double &PTHatMin, double &PTHatMax);
 void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFile &OutputFile, HiEventTreeMessenger &MHiEvent, JetTreeMessenger &MJet, PFTreeMessenger &MPF, SkimTreeMessenger &MSkim, TriggerTreeMessenger &MHLT, double &PTHatMin, double &PTHatMax );			
 
-
+//------------------------------//
+//								//
+// 0.01 for MC and 0.1 for data	// 
+//								//
+//------------------------------//
 int main(int argc, char *argv[])
 {
    // Checking if input is good
@@ -51,7 +55,7 @@ int main(int argc, char *argv[])
 
    HiEventTreeMessenger MHiEvent(InputFile);
    JetTreeMessenger MJet(InputFile, "akCs4PFJetAnalyzer/t");
-   PFTreeMessenger MPF(InputFile, "pfcandAnalyzer/pfTree");
+   PFTreeMessenger MPF(InputFile, "pfcandAnalyzerCS/pfTree");
    SkimTreeMessenger MSkim(InputFile);
    TriggerTreeMessenger MHLT(InputFile);
 
@@ -196,6 +200,13 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
    TBranch *MyMomentLightQuark=LightQuarkTree->Branch("MyMoment", &MyMoment, "MyMoment/F");
    TBranch *MyMomentGluon=GluonTree->Branch("MyMoment", &MyMoment, "MyMoment/F");
 
+
+	//----centrality tree
+	Float_t Centrality;
+
+	TBranch *dataCenterQ=LightQuarkTree->Branch("Centrality", &Centrality, "Centrality/F");
+	TBranch *dataCenterG=GluonTree->Branch("Centrality", &Centrality, "Centrality/F");	
+
    // Making histogram vectors
    for (int i=0;i<=IDNum;i++){
      HCount->SetName(("H"+IDName[i]+VarName[0]).c_str());
@@ -316,8 +327,6 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
       MSkim.GetEntry(iE);
       MHLT.GetEntry(iE);
 
-	  if (GetCentrality(MHiEvent.hiBin)<0.5 || GetCentrality(MHiEvent.hiBin)>0.8) continue;
-
       int used[MPF.ID->size()];
       for (int u=0; u<MPF.ID->size();u++){
 		used[u]=0;
@@ -332,6 +341,8 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
 
       if(MJet.PTHat < PTHatMin || MJet.PTHat >= PTHatMax)
          continue;
+
+	  Centrality=GetCentrality(MHiEvent.hiBin);
 
       HPTHatSelected.Fill(MJet.PTHat);
 
@@ -351,7 +362,7 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
             HJetPhiSmallPT.Fill(MJet.JetPhi[iJ]);
          }
 		 //Jet selection and histogram filling
-		 if (MJet.JetPT[iJ]<=100 || abs(MJet.JetEta[iJ])>=1)
+		 if (MJet.JetPT[iJ]<=160 || abs(MJet.JetEta[iJ])>=1)
 		   continue;
 		 for (unsigned int i=0; i!=MPF.ID->size(); i++){
 		   DR=GetDR(MPF.Eta->at(i), MPF.Phi->at(i), MJet.JetEta[iJ], MJet.JetPhi[iJ]);
@@ -593,6 +604,7 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
   //Tree writing
   LightQuarkTree->Write();
   GluonTree->Write();
+
 }
 //end of MCAnalayzer
 
@@ -645,6 +657,11 @@ void DataAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TF
 
    	TBranch *MyMomentData=DataTree->Branch("MyMoment", &MyMoment, "MyMoment/F");
 
+	//----centrality 
+	Float_t Centrality;
+
+	TBranch *dataCenter=DataTree->Branch("Centrality", &Centrality, "Centrality/F");
+
 	Float_t DR,DEta, DPhi, PTFrac, DRFrac, PTRatio=0;
 	int indx;
 	const Float_t PercentDR=0.1;	
@@ -659,7 +676,7 @@ void DataAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TF
 		}
 	}
 	
-	int EntryCount = MHiEvent.Tree->GetEntries() * 0.01;
+	int EntryCount = MHiEvent.Tree->GetEntries() * 0.1;
 
 	ProgressBar Bar(cout, EntryCount);
 	Bar.SetStyle(-1);
@@ -674,9 +691,7 @@ void DataAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TF
       	MJet.GetEntry(iE);
       	MPF.GetEntry(iE);
       	MSkim.GetEntry(iE);
-      	MHLT.GetEntry(iE);
-
- 		if (GetCentrality(MHiEvent.hiBin)<0.5 || GetCentrality(MHiEvent.hiBin)>0.8) continue;	
+      	MHLT.GetEntry(iE);	
 
       	int used[MPF.ID->size()];
       	for (int u=0; u<MPF.ID->size();u++){
@@ -694,10 +709,12 @@ void DataAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TF
 
       	HN.Fill(0);
 		
+		Centrality=GetCentrality(MHiEvent.hiBin);	
+		
 		for (int iJ=0;iJ<MJet.JetCount; iJ++)
 		{	
 			//Selection
-			if (MJet.JetPT[iJ]<=100 || abs(MJet.JetEta[iJ])>=1)
+			if (MJet.JetPT[iJ]<=160 || abs(MJet.JetEta[iJ])>=1)
 		   		continue;
 		
 			for (unsigned int i=0; i!=MPF.ID->size(); i++){
@@ -747,7 +764,9 @@ void DataAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TF
 			ParticleCount=DataMoment[0][0];
 			PTSquare=DataMoment[3][0];
 			MyMoment=DataMoment[3][3];	
+
 			DataTree->Fill();
+
 			// Cleaning/Resetting
 			vHadronDistTree.clear();
 			PTRatio=0;
@@ -765,4 +784,5 @@ void DataAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TF
 	}//end of iE cycle
 	HN.Write();
 	DataTree->Write();
+
 }

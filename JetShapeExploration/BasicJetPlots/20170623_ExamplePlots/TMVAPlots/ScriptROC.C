@@ -1,7 +1,9 @@
-{	TCanvas C;
+{	//ROCPlot.pdf
+	//This script is different in a sense that it does not create separate plots for each centrality	
+	TCanvas C;
 
-	string outDir="./PlotsAA/AA";
-	string inDir="../TMVAFactory/AAoutput/AA";
+	string outDir="./PlotsAA/160AA";
+	string inDir="../TMVAFactory/AAoutput/160AA";
 	string DataID="AA";
 
 //	string outDir="./PlotsPP/";
@@ -21,13 +23,25 @@
 		int on;
 	};	
 
+
+	const int CatNum=5;
+	int c=1; //will be used when cycling over centralities
+	int otherCatNum=CatNum;
+	string CentralName[CatNum]={"", "010", "1030", "3050", "5080"};	
+	string CentralVal[CatNum]={"--", "<0.1", ">0.1 && <0.3", ">0.3 && <0.5", ">0.5 && <0.8"};
+	// cycle switch for PP data	
+	if(DataID=="PP"){
+		c=0;
+		otherCatNum=1;
+	}
+
 	const int VarNum=11;
 	//add variables only to the back!!!
 	string VariableName[VarNum]={"All", "HalfPtMoment", "DRSquareMoment", "SmallDRPT", "MassMoment", "WidthMoment", "ParticleCount", "PTSquare", "Hadron", "HadronEta", "MyMoment"};
 
-	int Colors[VarNum]={2, 3, 4, 46, 46, 40, 41, 29, 38, 8, 9};
+	int Colors[VarNum]={2, 3, 4, 49, 46, 40, 41, 29, 38, 8, 9};
 	Float_t Width[2]={3, 2};
-	int Style[2]={1, 2};
+	int Style[5]={1, 2, 3, 4 , 5};
 
 	int OnCount=0;
 	const int MethodNum=2;		
@@ -38,8 +52,8 @@
 		
 	TFile *input;
 	for (int i=0;i<MethodNum;i++){
-		input=new TFile((inDir+"TMVAOutput"+VariableName[0]+".root").c_str());
-		if(((TTree*)input->Get("TestTree"))->FindBranch(Method[i].c_str())){
+		input=new TFile((inDir+CentralName[c]+"TMVAOutput"+VariableName[0]+".root").c_str());
+		if(((TTree*)input->Get("TestTree"))->FindBranch(Method[i].c_str())){ //if a required branch is found in the tree, the method will be turned on
 			tmp.on=1;
 			OnCount++;
 		}
@@ -48,16 +62,20 @@
 		MethMap[Method[i]]=tmp;
 	}
 	//--------
+	cout<<"Method switch complete!"<<endl;
 
 	TH1F *Histo=new TH1F("Name", "", 100, 0, 1);
 		
-
-	TFile *combined;
 	std::map<string,Variable> VarMap;
 	Variable temp;
+	int VarOnCount=0;
+	// no need to use cycles. This only extracts ROCs
 	for (int i=0;i<VarNum;i++){
-		input=new TFile((inDir+"TMVAOutput"+VariableName[i]+".root").c_str());
-		if(((TTree*)input->Get("TestTree"))) temp.on=1;
+		input=new TFile((inDir+CentralName[c]+"TMVAOutput"+VariableName[i]+".root").c_str());
+		if(((TTree*)input->Get("TestTree"))){
+			temp.on=1;
+			VarOnCount++;
+		}
 		else 
 		temp.on=0;
 		//input->Close();
@@ -66,42 +84,31 @@
 			temp.Line=Width[i];
 		}
 		else{
-			temp.Stylish=Style[1];
+			temp.Stylish=Style[i%4+1];
 			temp.Line=Width[1];
 		}
 		temp.Cute=Colors[i];
 		VarMap[VariableName[i]]=temp;
 	}
 	
+	cout<<"Variable switch complete!"<<endl;
 
-	combined = new TFile(("./"+DataID+"combined.root").c_str(),"recreate");
-	combined->Close();
-	for(int k=0;k<MethodNum;k++){
-		if (!MethMap[Method[k]].on) continue;
-		for (int i=0; i<VarNum;i++){
-			input =new TFile((inDir+"TMVAOutput"+VariableName[i]+".root").c_str());
-			combined= new TFile(("./"+DataID+"combined.root").c_str(), "UPDATE");
-			Histo=(TH1F*)input->Get(("Method_BDT/"+Method[k]+"/MVA_"+Method[k]+"_trainingRejBvsS").c_str());
-			Histo->SetName((VariableName[i]+"_MVA_"+Method[k]+"_trainingRejBvsS_file").c_str());
-			Histo->Write();
-			combined->Close();
-			input->Close();
-		}
-	}
 
 	std::vector<TH1F> curves;
+	std::vector<TH1F> effS, effB, signif; 
 	Histo= new TH1F("name", "", 100, 0, 1);
-	for(int k=0; k<MethodNum; k++){
-		for (int i=0; i<VarNum; i++){
-			Histo->SetName((VariableName[i]+"_MVA_"+Method[k]+"_trainingRejBvsS").c_str());
-			curves.push_back(*Histo);
+	for (int z=c; z<otherCatNum; z++){
+		for(int k=0; k<MethodNum; k++){
+			for (int i=0; i<VarNum; i++){
+				Histo->SetName((CentralName[z]+VariableName[i]+"_MVA_"+Method[k]+"_trainingRejBvsS").c_str());
+				curves.push_back(*Histo);
+			}
 		}
 	}
-	Histo->SetName("");
+	Histo->SetName("the histo");
 
-	//The start of actual ploting;
+	//The start of actual ploting!;
 
-	
 	std::vector<TLegend> legends;
 
 	TLegend *Legend=new TLegend(0.1, 0.6, 0.4, 0.12, "", "NDC");
@@ -110,54 +117,57 @@
 
 	int counter = -1;
 	int isdrawn = 0;
+	int indx;	
 	
+	for (int z=c; z<otherCatNum; z++){
+		indx=(z-c)*MethodNum*VarNum-1;
+		for (int k=0; k<MethodNum;k++){
 	
-	input=new TFile(("./"+DataID+"combined.root").c_str());
-	
-	for (int k=0; k<MethodNum;k++){
-		counter++;
-		if (MethMap[Method[k]].on==0) continue;
-		isdrawn=0;
-		for (int i=0; i<VarNum; i++){
-			if (VarMap[VariableName[i]].on==1){
-				//input =new TFile(("../TMVAFactory/TMVAOutput"+VariableName[i]+".root").c_str());
-				Histo=(TH1F*)input->Get((VariableName[i]+"_MVA_"+Method[k]+"_trainingRejBvsS_file").c_str());
+			counter++;
+			if (MethMap[Method[k]].on==0) continue;
+			isdrawn=0;
+			for (int i=0; i<VarNum; i++){
+				indx++;
+				if (VarMap[VariableName[i]].on==1){
+					input =new TFile((inDir+CentralName[z]+"TMVAOutput"+VariableName[i]+".root").c_str());
+					Histo=(TH1F*)input->Get(("Method_BDT/"+Method[k]+"/MVA_"+Method[k]+"_trainingRejBvsS").c_str());
 
-				Histo->SetLineWidth(VarMap[VariableName[i]].Line);
-				Histo->SetLineStyle(VarMap[VariableName[i]].Stylish);
-				Histo->SetLineColor(VarMap[VariableName[i]].Cute);
-				Histo->SetTitle("");
-				Histo->SetBins(100, 0, 1);
-					
-				curves.at(k*VarNum+i)=*Histo;
-				Histo->SetName("");
-
-				if (isdrawn==1) curves.at(k*VarNum+i).Draw("same");
-				else {
-					curves.at(k*VarNum+i).SetTitle(("ROC for "+Method[k]+" method").c_str());
-					curves.at(k*VarNum+i).Draw("");
-					isdrawn=1;
-				}
-				//Legend->AddEntry((VariableName[i]+"_MVA_"+Method[k]+"_trainingRejBvsS").c_str(), VariableName[i].c_str(), "l");
-				Legend->AddEntry(&curves.at(k*VarNum+i), VariableName[i].c_str(), "l");
-			}
+					Histo->SetName( (CentralName[z]+"_"+VariableName[i]+"_"+Method[k]+"_trainingRejBvsS_file").c_str() );
 			
-		}//end of variable cycle
-		Legend->Draw();
-		legends.push_back(*Legend);
-		if(counter==0 && OnCount==1)
-		C.SaveAs((outDir+"ROCPlots.pdf").c_str());
-		else if (counter==0)
-		C.SaveAs((outDir+"ROCPlots.pdf(").c_str());
-		else if (counter==OnCount-1)
-		C.SaveAs((outDir+"ROCPlots.pdf)").c_str());
-		else
-		C.SaveAs((outDir+"ROCPlots.pdf").c_str());	
+					Histo->SetLineWidth(VarMap[VariableName[i]].Line);
+					Histo->SetLineStyle(VarMap[VariableName[i]].Stylish);
+					Histo->SetLineColor(VarMap[VariableName[i]].Cute);
+					Histo->SetTitle("");
+					Histo->SetBins(100, 0, 1);
+					
+					curves.at(indx)=*Histo;
+					Histo->SetName("");
 
-		Legend->Clear();
-	}//end of method cycle
-	curves.clear();
+					if (isdrawn==1) curves.at(indx).Draw("same");
+					else {
+						curves.at(indx).SetTitle(("ROC for "+Method[k]+" method and centrality "+CentralVal[z]).c_str());
+						curves.at(indx).Draw("");
+						isdrawn=1;
+					}
+					Legend->AddEntry(&curves.at(indx), VariableName[i].c_str(), "l");
+				}
+			}//end of variable cycle, i
+			Legend->Draw();
+			legends.push_back(*Legend);
+			if(c==0 && OnCount==1)
+			C.SaveAs((outDir+"ROCPlots.pdf").c_str());
+			else if (indx==VarNum-1)
+			C.SaveAs((outDir+"ROCPlots.pdf(").c_str());
+			else if (indx==(otherCatNum-c)*VarNum*MethodNum-1)
+			C.SaveAs((outDir+"ROCPlots.pdf)").c_str());
+			else
+			C.SaveAs((outDir+"ROCPlots.pdf").c_str());	
+
+			Legend->Clear();
+		}//end of method cycle,k
+	}//end of category cycle,z
 	legends.clear();
 	input->Close();
 	C.Clear();
+	curves.clear();
 }
