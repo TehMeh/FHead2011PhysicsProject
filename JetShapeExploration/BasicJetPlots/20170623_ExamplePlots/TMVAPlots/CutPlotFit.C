@@ -3,13 +3,13 @@
 
 	TCanvas C;
 
-	//string outDir="./PlotsAA/AA";
-	//string inDir="../TMVAFactory/AAoutput/AA";
-	//string DataID="PbPb";
-	string reader="../TMVAReader/"; //DO NOT COMMENT THIS
-	string outDir="./PlotsPP/";
-	string inDir="../TMVAFactory/PPoutput/";
-	string DataID="PP";
+	string outDir="./PlotsAAFinal/160AAF";
+	string inDir="../TMVAFactory/AAoutputFinal/160AAF";
+	string DataID="PbPb";
+	string reader="../TMVAReader/F160"; //DO NOT COMMENT THIS
+	//string outDir="./PlotsPPFinal/F";
+	//string inDir="../TMVAFactory/PPoutputFinal/F";
+	//string DataID="PP";
 
 	const int CatNum=5;
 	int c=1; //will be used when cycling over centralities

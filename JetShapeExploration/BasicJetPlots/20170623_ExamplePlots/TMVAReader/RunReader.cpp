@@ -21,17 +21,17 @@ using namespace TMVA;
 
 int main()
 {
-	//std::string inDir="../TMVAFactory/AAoutput/";
-	//std::string DataID="PbPb";
-	//std::string outDir="./"; //PPweightAA/PPweight";  "./160"
-	//std::string dataFile="../MyScaledResult/AAData_NoCrossSection.root";
-	//std::string DataName="AA";
-	std::string JobName="TMVAJets"; //or "_160TMVAJets"
-	std::string inDir="../TMVAFactory/PPoutput/";
-	std::string DataID="PP";
-	std::string outDir="./";
-	std::string dataFile="../MyScaledResult/PPDataHighPTJet_NoCrossSection.root"; 
-	std::string DataName="";
+	std::string inDir="../TMVAFactory/AAoutputFinal/AAF";
+	std::string DataID="PbPb";
+	std::string outDir="./F"; //PPweightAA/PPweight";  "./160"
+	std::string dataFile="../MyScaledResultFinal/AAData_NoCrossSection.root";
+	std::string DataName="AA";
+	std::string JobName="TMVAJetsFinal"; //or "_160TMVAJets"
+	//std::string inDir="../TMVAFactory/PPoutputFinal/F";
+	//std::string DataID="PP";
+	//std::string outDir="./F";
+	//std::string dataFile="../MyScaledResultFinal/PPDataHighPTJet_NoCrossSection.root"; 
+	//std::string DataName="";
 
 	//std::string dataFile="../MyScaledResult/AA6DijetCymbal.root"; //impossible to do now. Have to Make another "TMVA-like" tree at the RunExample.cpp level...or maybe somehow combine LightQuark and Gluon trees with JetID event tagging...Probably not gonna make it quickly enough. Making this on a higher level would include changing too much code;
 	
@@ -57,7 +57,7 @@ int main()
 	const int MethodNum=2;		
 	std::string Method[MethodNum]={"BDT_DAB", "BDT_Fisher"};
 
-	TFile *test=new TFile((inDir+DataName+CentralName[b]+"TMVAOutputAll.root").c_str());
+	TFile *test=new TFile((inDir+CentralName[b]+"TMVAOutputAll.root").c_str());
 
 	struct Variable{
 		int on=1;
@@ -101,7 +101,8 @@ int main()
 	Float_t Hadron[8]={0, 0, 0, 0, 0, 0, 0, 0};
 	Float_t HadronEta[8]={0, 0, 0, 0, 0, 0, 0, 0};
 	Float_t Centrality; //used as a spectator/category variable in the reader
-
+	Float_t ID,pt;
+	Float_t dRN, newdRN;
 	for (int m=b; m<otherCatNum; m++){
 
 		TMVA::Reader *JetReader = new TMVA::Reader( "!Color:!Silent" );
@@ -149,6 +150,11 @@ int main()
 
 		if(DataID=="PbPb")		
 			JetReader->AddSpectator("Centrality", &Centrality);
+			JetReader->AddSpectator("pt", &pt);
+			JetReader->AddSpectator("dRN", &dRN);
+			JetReader->AddSpectator("ID", &ID);
+			JetReader->AddSpectator("newdRN", &newdRN);
+		
 
 		TFile *input=new TFile(dataFile.c_str());
 		TTree *MapleTree=(TTree*)input->Get((DataID+"Tree").c_str());
@@ -203,6 +209,10 @@ int main()
 
 		if(DataID=="PbPb")		
 			MapleTree->SetBranchAddress("Centrality", &Centrality);
+		MapleTree->SetBranchAddress("pt", &pt);
+		MapleTree->SetBranchAddress("dRN", &dRN);
+		MapleTree->SetBranchAddress("ID", &ID);
+		MapleTree->SetBranchAddress("newdRN", &newdRN);
 	
 		TFile *target=new TFile((outDir+DataID+CentralName[m]+"TMVA.root").c_str(),"RECREATE" );
 
@@ -282,6 +292,5 @@ int main()
 
 		delete JetReader;
 	}//end of centrality cycle, m
-
 	return 0;
 }

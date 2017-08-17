@@ -2,13 +2,13 @@
 	//QuickPlot.pdf , Fasterplot.pdf
     gStyle->SetOptStat(0);
 
-	string outDir="./PlotsAA/AA";
-	string inDir="../TMVAFactory/AAoutput/AA"; 
-	string DataID="AA"; //not dependant on centrality
+	string outDir="./PlotsAAFinal/160AAF";
+	string inDir="../TMVAFactory/AAoutputFinal/160AAF"; 
+	string DataID="AA"; //not dependant on centrality, no need for "160AA"
 
-//	string outDir="./PlotsPP/";
-//	string inDir="../TMVAFactory/PPoutput/";
-//	string DataID="PP";
+	//string outDir="./PlotsPPFinal/F";
+	//string inDir="../TMVAFactory/PPoutputFinal/F";
+	//string DataID="PP";
 
     TCanvas C;
 
@@ -45,7 +45,7 @@
 
 	int OnCount=0;
 	const int MethodNum=2;		
-	string Method[MethodNum]={"BDT_DAB", "BDT_Fisher"};
+	string Method[MethodNum]={"BDT_Fisher", "BDT_DAB"};
 	string Bound="0"; //used as comp[j]+Bound
 	string comp[2]={"<", ">"};
 	std::map<string,Meth> MethMap;
@@ -62,6 +62,7 @@
 		tmp.on=0;
 		MethMap[Method[i]]=tmp;
 	}
+
 	float axis[VarNum][3]={ {100, 0, 1}, {100, 0, 25}, {100, 0, 1}, {100, 0, 0.6}, {100, 0, 0.6}, {100, 0, 100 }, {100, 0, 1}, {10, 0, 5}, {10, 0, 5}, {160, 0, 80}};
 	string AxisName[VarNum]={"sum[Pt^1.5]", "sum[dR^2]", "sum[Pt], dR<0.1", "sum[Pt*dR^2]", "sum[Pt*dR]", "Multiplicity", "sum[Pt^2]", "<=dR<", "<=dEta<", "sum[Pt^2*dR^(-1.5)]"};
 	string rings[10]={"", "0", "0.05", "0.1", "0.15", "0.2", "0.25", "0.3", "0.35", "0.4"}; //used with Hadron and HadronEta axis naming
@@ -83,7 +84,8 @@
 		VarMap[VariableName[i]]=temp;
 		input->Close();
 	}
-//----------------------------------------------------------------------------------------------
+	cout<<"Maps and switching: OK!"<<endl;
+//---------------------------------------------------------------------------------------------
 
 	
     TFile *File;//((inDir+"TMVAOutputAll.root").c_str());
@@ -103,7 +105,7 @@
     		theText[i].SetTextSize(0.03);
 	}
 
-     TLegend legendary(0.29, 0.9, 0.9, 0.65, "", "NDC");
+     TLegend legendary(0.27, 0.9, 0.9, 0.65, "", "NDC");
 	legendary.SetTextFont(42);
 	legendary.SetTextSize(0.037);
 	legendary.SetHeader("");
@@ -185,7 +187,6 @@
 	int MethCounter=-1, VarCounter=-1;
 
 	C.Clear();
-	C.Divide(2,1);
 
 	for(int z=c; z<otherCatNum; z++){
 		File=new TFile((inDir+CentralName[z]+"TMVAOutputAll.root").c_str());
@@ -230,50 +231,64 @@
 				}//end of rings cycle, m
 			}//end of variable cycle, i
 		}//end of methood cycle, k
+
 		//that last vector, last histogram integral thing
 		H1.SetName("stranger things");
 		//end of vector creation
-		C.Divide(2,1);
-		MethCounter=-1;
+
 		//actual plotting and drawing
+		MethCounter=-1;
 		for (int k=0; k<MethodNum;k++){
-			VarCounter=-1;
 
 			indx=k*2*((VarNum-2)+8*2)-1;
 
 			if (!MethMap[Method[k]].on) continue;
 			MethCounter++;
 
+			VarCounter=-1;
 			for(int i=0; i<VarNum;i++){
-
 
 				if (VarMap[VariableName[i]].cycles>1) a=1;
 				else a=0;
 				b=0;
 				if (i>0){
 					if (VarMap[VariableName[i-1]].cycles>1) b=1; //checks what was the number of cycles the last time;
-					if (!VarMap[VariableName[i-1]].on) indx+=2*(b*7+1);			
+					if (!VarMap[VariableName[i-1]].on) indx+=2*(b*7+1);	//if the  variable was NOT on accounts for the unincreased indx
 				}	
 
 				if (!VarMap[VariableName[i]].on) continue;
 				VarCounter++;
 
 				for (int m=a; m<VarMap[VariableName[i]].cycles; m++){
-
+					C.Divide(2,1);
 					for (int j=0;j<2;j++){
 						indx++;
-		
+
 						C.cd(j+1);
-						Tree->Draw((VariableName[i]+Numbers[m]+">>"+Method[k]+"_"+VariableName[i]+Numbers[m]+Form("_Background%i",j)).c_str(), "classID == 1", "");				
+						
+						Tree->Draw((VariableName[i]+Numbers[m]+">>"+Method[k]+"_"+VariableName[i]+Numbers[m]+Form("_Background%i",j)).c_str(), "classID == 1", "");
 						Tree->Draw((VariableName[i]+Numbers[m]+">>"+Method[k]+"_"+VariableName[i]+Numbers[m]+Form("_BackgroundFill%i",j)).c_str(), ("classID == 1 && "+Method[k]+comp[j]+Bound).c_str(), "same");
 						Tree->Draw((VariableName[i]+Numbers[m]+">>"+Method[k]+"_"+VariableName[i]+Numbers[m]+Form("_Signal%i",j)).c_str(), "classID == 0", "same");
 						Tree->Draw((VariableName[i]+Numbers[m]+">>"+Method[k]+"_"+VariableName[i]+Numbers[m]+Form("_SignalFill%i",j)).c_str(), ("classID == 0 && "+Method[k]+comp[j]+Bound).c_str(), "same");
+						C.cd(j+1)->Clear();
+						if(Background.at(indx).GetMaximum()<Signal.at(indx).GetMaximum()){
+							Background.at(indx).SetAxisRange(0,1.3*Signal.at(indx).GetMaximum(), "Y");
+						}
+						else{
+							Background.at(indx).SetAxisRange(0,1.3*Background.at(indx).GetMaximum(), "Y");
+						}
+						Background.at(indx).Draw("");
+						BackgroundFill.at(indx).Draw("same");
+						Signal.at(indx).Draw("same");
+						SignalFill.at(indx).Draw("same");
+						//C.Update();
 						PrettyLegend.at(indx).Clear();
 						PrettyLegend.at(indx).AddEntry(&Background.at(indx), "ID = Gluon (1)", "l");
 						PrettyLegend.at(indx).AddEntry(&BackgroundFill.at(indx), ("ID = Gluon (1), "+Method[k]+comp[j]+Bound).c_str(), "f");
 						PrettyLegend.at(indx).AddEntry(&Signal.at(indx), "ID = Quark (0), ", "l");
 						PrettyLegend.at(indx).AddEntry(&SignalFill.at(indx), ("ID = Quark (0), "+Method[k]+comp[j]+Bound).c_str(), "f");	
 						PrettyLegend.at(indx).Draw();
+
 						if (j==1){
 							//Quarks as signal
 							S=Signal.at(indx).Integral();
@@ -294,11 +309,12 @@
 						}
 						theText[indx].SetText(0.25, 0.91, Form("purity before cut= %1.3f , purity after cut= %1.3f", Ratio, CutRatio));
 						theText[indx].Draw();
-						//C.Update();
+						C.Update();
 					}//end of <> cycle, j;
 					if (VarCounter==0 && MethCounter==0 && (VarOnCount>1 || OnCount>1) && m==a) C.SaveAs((outDir+CentralName[z]+"QuickPlot.pdf(").c_str());
-					else if(MethCounter==OnCount-1 && VarCounter==VarOnCount-1 && VarMap[VariableName[i]].cycles==m+1) C.SaveAs((outDir+CentralName[z]+"QuickPlot.pdf)").c_str());
+					else if(MethCounter==OnCount-1 && VarCounter==VarOnCount-1 && VarMap[VariableName[i]].cycles==m+1 &&(VarOnCount>1 || OnCount>1)) C.SaveAs((outDir+CentralName[z]+"QuickPlot.pdf)").c_str());
 					else C.SaveAs((outDir+CentralName[z]+"QuickPlot.pdf").c_str());
+					C.Clear();
 				}//end of rings cycle, m
 			}// end of variable cycle, i
 		}//end of method cycle, k
@@ -308,5 +324,5 @@
 		Signal.clear();
 		SignalFill.clear();
 		C.Clear();
-	}
+	}//end of centrality cycle, z
 }

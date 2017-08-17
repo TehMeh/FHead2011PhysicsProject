@@ -5,13 +5,13 @@
 
 	TCanvas C;
 
-	//string outDir="./PlotsAA/AA"; // ./PlotsAApp/AApp  or ./PlotsAA/(160)AA
-	//string inDir="../TMVAFactory/AAoutput/AA";
-	//string DataID="PbPb";
-	string reader="../TMVAReader/"; //"../TMVAReader/PPweightAA/PPweight", "../TMVAReader/160"
-	string outDir="./PlotsPP/";
-	string inDir="../TMVAFactory/PPoutput/";
-	string DataID="PP";
+	string outDir="./PlotsAAFinal/160AAF"; // ./PlotsAApp/AApp  or ./PlotsAA/(160)AA
+	string inDir="../TMVAFactory/AAoutputFinal/160AAF";
+	string DataID="PbPb";
+	string reader="../TMVAReader/F160"; //"../TMVAReader/PPweightAA/PPweight", "../TMVAReader/160"
+	//string outDir="./PlotsPPFinal/F";
+	//string inDir="../TMVAFactory/PPoutputFinal/F";
+	//string DataID="PP";
 
 	const int CatNum=5;
 	int c=1; //will be used when cycling over centralities
@@ -23,7 +23,7 @@
 		c=0;
 		otherCatNum=1;
 	}
-	int UseWeight=1;
+	int UseWeight=0; // <<<<<<<<<<<<<<<<----------------------weight switch!!
 	string weight[2]={"", "Wght"};
 	Double_t val1[8], val2[8];
 
@@ -71,7 +71,7 @@
 			for(int z=c; z<otherCatNum; z++){
 				iweight>>val1[k*(otherCatNum-c)+(z-c)];
 				iweight>>val2[k*(otherCatNum-c)+(z-c)];
-				cout<<val1[k*(otherCatNum-c)+(z-c)]<<"  asddasdasdasd"<<endl;
+				cout<<val1[k*(otherCatNum-c)+(z-c)]<<" weights"<<endl;
 			}
 		}	
 		iweight.close();
@@ -131,6 +131,7 @@
 	//VarOnCount--;
 	//*/
 	// end of map making and such
+	cout<<"Maps and switching: OK!"<<endl;
 	//------------------------------------------------------------
 
 	TH1F *H1=new TH1F("yeah boii", "", 100, 0, 1);	
@@ -171,10 +172,9 @@
 
 		TFile *dataFile=new TFile((reader+DataID+CentralName[z]+"TMVA.root").c_str());
 		TFile *MCFile=new TFile((inDir+CentralName[z]+"TMVAOutputAll.root").c_str());
-
 		TTree *DataTree=(TTree*)dataFile->Get((DataID+"Tree").c_str());
 		TTree *MCTree=(TTree*)MCFile->Get("TestTree");	
-	
+		cout<<"Files: OK!"<<endl;
 		for (int k=0; k<MethodNum; k++){
 
 			for( int i=0; i<VarNum; i++){
@@ -261,7 +261,7 @@
 
 		//If this is not included...the last histogram of the last vector gives zero integral. In this case smallerG is the last vector...strange indeed.
 		H1->SetName("histogram");		
-
+		cout<<"Push_Back: OK!"<<endl;
 		// teh plotting!!!!
 
 		C.Divide(2,2);

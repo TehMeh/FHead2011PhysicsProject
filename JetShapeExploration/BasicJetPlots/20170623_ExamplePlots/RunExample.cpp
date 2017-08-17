@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <cstring>
+#include <cmath>
 
 using namespace std;
 
@@ -15,12 +16,12 @@ using namespace std;
 #include "Messenger.h"
 
 //Analysis prototypes for Data and MC
-void DataAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFile &OutputFile, HiEventTreeMessenger &MHiEvent, JetTreeMessenger &MJet, PFTreeMessenger &MPF, SkimTreeMessenger &MSkim, TriggerTreeMessenger &MHLT, double &PTHatMin, double &PTHatMax);
-void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFile &OutputFile, HiEventTreeMessenger &MHiEvent, JetTreeMessenger &MJet, PFTreeMessenger &MPF, SkimTreeMessenger &MSkim, TriggerTreeMessenger &MHLT, double &PTHatMin, double &PTHatMax );			
+void DataAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFile &OutputFile, HiEventTreeMessenger &MHiEvent, JetTreeMessenger &MJet, PFTreeMessenger &MPF, SkimTreeMessenger &MSkim, TriggerTreeMessenger &MHLT, double &PTHatMin, double &PTHatMax, GGTreeMessenger &MGG);
+void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFile &OutputFile, HiEventTreeMessenger &MHiEvent, JetTreeMessenger &MJet, PFTreeMessenger &MPF, SkimTreeMessenger &MSkim, TriggerTreeMessenger &MHLT, double &PTHatMin, double &PTHatMax, GGTreeMessenger &MGG);			
 
 //------------------------------//
 //								//
-// 0.01 for MC and 0.1 for data	// 
+// 0.1 for MC and 0.1 for data	// 
 //								//
 //------------------------------//
 int main(int argc, char *argv[])
@@ -52,12 +53,24 @@ int main(int argc, char *argv[])
       cerr << "Error!  Input file error!" << endl;
       return -1;
    }
+	
+	string tree1, tree2;
+	
+	if(IsPP){
+		tree1="ak4PFJetAnalyzer/t";
+		tree2="pfcandAnalyzer/pfTree";
+	}
+	else if (!IsPP){
+		tree1="akCs4PFJetAnalyzer/t";
+		tree2="pfcandAnalyzerCS/pfTree";
+	}
 
    HiEventTreeMessenger MHiEvent(InputFile);
-   JetTreeMessenger MJet(InputFile, "akCs4PFJetAnalyzer/t");
-   PFTreeMessenger MPF(InputFile, "pfcandAnalyzerCS/pfTree");
+   JetTreeMessenger MJet(InputFile, tree1);
+   PFTreeMessenger MPF(InputFile, tree2);
    SkimTreeMessenger MSkim(InputFile);
    TriggerTreeMessenger MHLT(InputFile);
+   GGTreeMessenger MGG(InputFile);
 
    if(MHiEvent.Tree == NULL)
    {
@@ -68,9 +81,9 @@ int main(int argc, char *argv[])
    	// Prepare output
    	TFile OutputFile(Output.c_str(), "RECREATE");
 	if(IsData)
-		DataAnalyzer(IsPP, IsPPHiReco, IsPA, InputFile, OutputFile, MHiEvent, MJet, MPF, MSkim, MHLT, PTHatMin, PTHatMax );
+		DataAnalyzer(IsPP, IsPPHiReco, IsPA, InputFile, OutputFile, MHiEvent, MJet, MPF, MSkim, MHLT, PTHatMin, PTHatMax, MGG );
 	else if (!IsData)
-		MCAnalyzer(IsPP, IsPPHiReco, IsPA, InputFile, OutputFile, MHiEvent, MJet, MPF, MSkim, MHLT, PTHatMin, PTHatMax );
+		MCAnalyzer(IsPP, IsPPHiReco, IsPA, InputFile, OutputFile, MHiEvent, MJet, MPF, MSkim, MHLT, PTHatMin, PTHatMax, MGG );
 	
 	// Cleanup
    	InputFile->Close();
@@ -79,7 +92,7 @@ int main(int argc, char *argv[])
 }
 
 
-void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFile &OutputFile, HiEventTreeMessenger &MHiEvent, JetTreeMessenger &MJet, PFTreeMessenger &MPF, SkimTreeMessenger &MSkim, TriggerTreeMessenger &MHLT, double &PTHatMin, double &PTHatMax )
+void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFile &OutputFile, HiEventTreeMessenger &MHiEvent, JetTreeMessenger &MJet, PFTreeMessenger &MPF, SkimTreeMessenger &MSkim, TriggerTreeMessenger &MHLT, double &PTHatMin, double &PTHatMax, GGTreeMessenger &MGG )
 {
    TH1D HN("HN", "Raw event count", 1, 0, 1); //important!
    TH1D HPTHat("HPTHat", ";PTHat;", 100, 0, 500);
@@ -139,11 +152,17 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
    //Trees
    TTree *LightQuarkTree=new TTree("LightQuarkTree", "");
    TTree *GluonTree=new TTree("GluonTree", "");
+   TTree *PUTree=new TTree("PUTree", "");
    //Tree branches
    std::vector<Float_t> vHadronDistTree;
    Float_t HalfPtMoment,DRSquareMoment, WidthMoment, MassMoment, SmallDRPT, ParticleCount, PTSquare, MyMoment;
    Float_t Hadron[8]={0, 0, 0, 0, 0, 0, 0, 0}; //hadron count per ring
    Float_t HadronEta[8]={0, 0, 0, 0, 0, 0, 0, 0}; //hadron count per eta "ring"
+   std::vector<Float_t> puCount, pubx, dRN, vpt, newdRN;
+   Float_t pu0;
+   std:vector<Float_t> vID;
+   Float_t newPhi, newEta, newdR, px, py, pz;
+   
 
    TBranch *HadDistLightQ=LightQuarkTree->Branch("HadronDist", &vHadronDistTree);
    TBranch *HadDistGluon=GluonTree->Branch("HadronDist", &vHadronDistTree);
@@ -161,7 +180,18 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
    TBranch *ParticleCountGluon=GluonTree->Branch("ParticleCount", &ParticleCount, "ParticleCount/F");
    TBranch *PTSquareLightQuark=LightQuarkTree->Branch("PTSquare", &PTSquare, "PTSquare/F");
    TBranch *PTSquareGluon=GluonTree->Branch("PTSquare", &PTSquare, "PTSquare/F");
-		
+  
+   TBranch *puCountGluon=GluonTree->Branch("puCount", &puCount);
+   TBranch *puCountLightQuark=LightQuarkTree->Branch("puCount", &puCount);
+   TBranch *pubxGluon=GluonTree->Branch("pubx", &pubx);
+   TBranch *pubxLightQuark=LightQuarkTree->Branch("pubx", &pubx);
+   TBranch *dRNLightQuark=LightQuarkTree->Branch("dRN", &dRN);
+   TBranch *dRNGluon=GluonTree->Branch("dRN", &dRN);
+   TBranch *ptGluon=GluonTree->Branch("pt", &vpt);
+   TBranch *ptLightQuark=LightQuarkTree->Branch("pt", &vpt);
+   TBranch *pu0Gluon=GluonTree->Branch("pu0", &pu0, "pu0/F");
+   TBranch *pu0LightQuark=LightQuarkTree->Branch("pu0", &pu0, "pu0/F");
+  	
    TBranch *Hadron05LightQuark=LightQuarkTree->Branch("Hadron05", &Hadron[0], "Hadron05/F");
    TBranch *Hadron05Gluon=GluonTree->Branch("Hadron05", &Hadron[0], "Hadron05/F");
    TBranch *Hadron1LightQuark=LightQuarkTree->Branch("Hadron1", &Hadron[1], "Hadron1/F");
@@ -200,7 +230,21 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
    TBranch *MyMomentLightQuark=LightQuarkTree->Branch("MyMoment", &MyMoment, "MyMoment/F");
    TBranch *MyMomentGluon=GluonTree->Branch("MyMoment", &MyMoment, "MyMoment/F");
 
+   TBranch *puCountPU=PUTree->Branch("puCount", &puCount);
+   TBranch *pubxPU=PUTree->Branch("pubx", &pubx);
+   TBranch *dRNPU=PUTree->Branch("dRN", &dRN);
+   TBranch *ptPU=PUTree->Branch("pt", &vpt);
+   TBranch *pu0PU=PUTree->Branch("pu0", &pu0, "pu0/F");
 
+	TBranch *IDLightQuark=LightQuarkTree->Branch("ID", &vID);
+	TBranch *IDGluon=GluonTree->Branch("ID", &vID);
+	TBranch *IDPU=PUTree->Branch("ID", &vID);
+
+	TBranch *newDRGluon=GluonTree->Branch("newdRN", &newdRN);
+	TBranch *newDRLightQuark=LightQuarkTree->Branch("newdRN", &newdRN);
+	TBranch *newDRPU=PUTree->Branch("newdRN", &newdRN);
+	
+	
 	//----centrality tree
 	Float_t Centrality;
 
@@ -310,7 +354,7 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
 
 
    // Loop over events
-   int EntryCount = MHiEvent.Tree->GetEntries() * 0.01;
+   int EntryCount = MHiEvent.Tree->GetEntries() * 0.1;
 
    ProgressBar Bar(cout, EntryCount);
    Bar.SetStyle(-1);
@@ -326,11 +370,20 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
       MPF.GetEntry(iE);
       MSkim.GetEntry(iE);
       MHLT.GetEntry(iE);
+	  MGG.GetEntry(iE);
 
       int used[MPF.ID->size()];
       for (int u=0; u<MPF.ID->size();u++){
 		used[u]=0;
       }
+
+	  for(int pu=0; pu<MGG.NPUInfo; pu++){
+		 if(MGG.PUBX->at(pu)==0)
+			pu0=(Float_t)MGG.PUCount->at(pu);
+
+		 puCount.push_back(MGG.PUCount->at(pu));
+		 pubx.push_back(MGG.PUBX->at(pu));
+	  }
 
       // Fill histograms
       HN.Fill(0);
@@ -362,30 +415,71 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
             HJetPhiSmallPT.Fill(MJet.JetPhi[iJ]);
          }
 		 //Jet selection and histogram filling
-		 if (MJet.JetPT[iJ]<=160 || abs(MJet.JetEta[iJ])>=1)
-		   continue;
+		 //if (MJet.JetPT[iJ]<=100 || abs(MJet.JetEta[iJ])>=1)
+		 //	continue;
+		 px=0;
+		 py=0;
+		 pz=0; //this is enought to get the angles, no need for py
+		 //axis recalcualtion cycle
 		 for (unsigned int i=0; i!=MPF.ID->size(); i++){
-		   DR=GetDR(MPF.Eta->at(i), MPF.Phi->at(i), MJet.JetEta[iJ], MJet.JetPhi[iJ]);
-		   if (DR>=0.4 || used[i]==1)
-			 continue;
+			 DR=GetDR(MPF.Eta->at(i), MPF.Phi->at(i), MJet.JetEta[iJ], MJet.JetPhi[iJ]);
+			   if (MPF.ID->at(i)>0 && MPF.ID->at(i)<6 && MJet.JetPT[iJ]>100 && abs(MJet.JetEta[iJ])<1){
+				   if(DR<0.4 && used[i]==0)
+				 		dRN.push_back(DR);
+				}
+			 if (DR>=0.4 || used[i]==1)
+			 	continue;
+				px+=MPF.PT->at(i)*cos(MPF.Phi->at(i));
+				py+=MPF.PT->at(i)*sin(MPF.Phi->at(i));
+				pz+=MPF.PT->at(i)*sinh(MPF.Eta->at(i));	
+		  }//end of axis recalculation
+		newPhi=acos(px/sqrt(pow(px,2)+pow(py,2)));
+		newEta=asinh(pz/sqrt(pow(px,2)+pow(py,2)));
+		px=0;
+		py=0;
+		pz=0;
+		for (unsigned int i=0; i!=MPF.ID->size(); i++){
+			 newdR=GetDR(newEta, newPhi, MPF.Eta->at(i), MPF.Phi->at(i));
+			 if (newdR<=0.4 && used[i]==0){
+				px+=MPF.PT->at(i)*cos(MPF.Phi->at(i));
+				py+=MPF.PT->at(i)*sin(MPF.Phi->at(i));
+				pz+=MPF.PT->at(i)*sinh(MPF.Eta->at(i));
+			}
+		 }//end of jet pt recalculation
+		if (sqrt(pow(px,2)+pow(py,2))<=100 || abs(newEta)>=1)
+		   	continue;
+		 for (unsigned int i=0; i!=MPF.ID->size(); i++){
+		   //DR=GetDR(MPF.Eta->at(i), MPF.Phi->at(i), MJet.JetEta[iJ], MJet.JetPhi[iJ]);
+		   newdR=GetDR(newEta, newPhi, MPF.Eta->at(i), MPF.Phi->at(i));
+		   //if(newdR<0.4 && used[i]==0)
+
 		   if (MPF.ID->at(i)>0 && MPF.ID->at(i)<6){
+		 	   if (newdR>0.4 || used[i]==1)
+					continue;
 			   used[i]=1;
 			   DEta=MJet.JetEta[iJ]-MPF.Eta->at(i);
 			   DPhi=MJet.JetPhi[iJ]-MPF.Phi->at(i);
 			   if (DPhi<-M_PI) DPhi=DPhi+2*M_PI;
 			   else if (DPhi>M_PI) DPhi=DPhi-2*M_PI;
+
 			   indx=MPF.ID->at(i)-1;
-			   PTFrac=MPF.PT->at(i)/MJet.JetPT[iJ];
-			   DRFrac=DR/0.4;		   
-			
-			   if (DR<PercentDR){
+
+			   //PTFrac=MPF.PT->at(i)/MJet.JetPT[iJ];
+			   PTFrac=MPF.PT->at(i)/sqrt(pow(px,2)+pow(py,2));
+			   DRFrac=newdR/0.4;	
+	   
+			   vID.push_back(MPF.ID->at(i));
+			   newdRN.push_back(newdR);
+			   vpt.push_back(MPF.PT->at(i));
+
+			   if (newdR<PercentDR){
 				PTRatio[0]=PTRatio[0]+PTFrac;
 			   }
 			   // Parton separation
 				//u,d,s
 			   if (abs(MJet.RefPartonFlavor[iJ])==1 || abs(MJet.RefPartonFlavor[iJ])==2 || abs(MJet.RefPartonFlavor[iJ])==3){
 				   		vPTParton.at(0).at(indx).Fill(DR,MPF.PT->at(i));
-					if (indx==4){
+					if (indx==4){ //if hadron
 			  	   		vHadCountDRParton.at(0).Fill(DR);
 						vHadronDistTree.push_back(DR);
 						for(int r=1; r<9; r++){ 
@@ -395,15 +489,13 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
 								HadronEta[r-1]++;
 						}   
 					}
-					if (DR<PercentDR){
+					if (newdR<PercentDR){//small dR
 						PTRatio[1]=PTRatio[1]+PTFrac;
 					}
-					for (int j=0;j<amX;j++){
+					for (int j=0;j<amX;j++){ //moments
 						for (int m=0;m<amY;m++){
-							if (y[m]<0 && DRFrac==0){
-							cout<<DRFrac<<"  u,d,s"<<endl;					
-							continue;
-							}
+							if (y[m]<0 && DRFrac==0)				
+								continue;
 							moment[0][j][m]+=pow(PTFrac,x[j])*pow(DRFrac,y[m]);
 						}
 					}
@@ -414,7 +506,7 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
 					if (indx==4){
 			  	   		vHadCountDRParton.at(1).Fill(DR);
 					}
-					if (DR<PercentDR){
+					if (newdR<PercentDR){
 						PTRatio[2]=PTRatio[2]+PTFrac;
 				   	}
 					for (int j=0;j<amX;j++){
@@ -431,7 +523,7 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
 					if (indx==4){
 			  	   		vHadCountDRParton.at(2).Fill(DR);
 					}
-					if (DR<PercentDR){
+					if (newdR<PercentDR){
 						PTRatio[3]=PTRatio[3]+PTFrac;
 				   	}
 					for (int j=0;j<amX;j++){
@@ -455,7 +547,7 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
 							HadronEta[r-1]++;
 						}
 					}
-					if (DR<PercentDR){
+					if (newdR<PercentDR){
 						PTRatio[4]=PTRatio[4]+PTFrac;
 					}
 					for (int j=0;j<amX;j++){
@@ -463,8 +555,10 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
 							if (y[m]<0 && DRFrac==0)	continue;
 							moment[3][j][m]+=pow(PTFrac,x[j])*pow(DRFrac,y[m]);
 						}
-					}	
+					}
 			   }
+
+
 			   IDCount[indx]++;
 			   vPTDist.at(0).at(indx).Fill(DR,MPF.PT->at(i));
 			   vPTDist.at(1).at(indx).Fill(DEta,MPF.PT->at(i));
@@ -485,8 +579,7 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
 			ParticleCount=moment[0][0][0]; // ^0
 			PTSquare=moment[0][3][0];//Pt^2
 			MyMoment=moment[0][3][3];//Pt^2dR^(-1.5)
-			LightQuarkTree->Fill();		
-			vHadronDistTree.clear();
+			LightQuarkTree->Fill();
 		 }
 		 else if (MJet.RefPartonFlavor[iJ]==21){
 			HalfPtMoment=moment[3][2][0];
@@ -498,8 +591,15 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
 			PTSquare=moment[3][3][0];
 			MyMoment=moment[3][3][3];	
 			GluonTree->Fill();
-			vHadronDistTree.clear();
 		 }
+		if(MJet.RefPartonFlavor[iJ]==1 || MJet.RefPartonFlavor[iJ]==2 || MJet.RefPartonFlavor[iJ]==3 || MJet.RefPartonFlavor[iJ]==21)
+			PUTree->Fill();
+
+		vHadronDistTree.clear();
+		dRN.clear();
+		newdRN.clear();
+		vpt.clear();
+		vID.clear();
 		for(int r=0;r<8;r++){
 			Hadron[r]=0;
 			HadronEta[r]=0;
@@ -549,6 +649,9 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
 		vCount.at(k).Fill(IDCount[k]);
 		IDCount[k]=0;
       }
+
+	  pubx.clear();
+	  puCount.clear();
    }//end of event cycle
 
    Bar.Update(EntryCount);
@@ -604,6 +707,7 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
   //Tree writing
   LightQuarkTree->Write();
   GluonTree->Write();
+  PUTree->Write();
 
 }
 //end of MCAnalayzer
@@ -611,7 +715,7 @@ void MCAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFil
 
 
 
-void DataAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFile &OutputFile, HiEventTreeMessenger &MHiEvent, JetTreeMessenger &MJet, PFTreeMessenger &MPF, SkimTreeMessenger &MSkim, TriggerTreeMessenger &MHLT, double &PTHatMin, double &PTHatMax )
+void DataAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TFile &OutputFile, HiEventTreeMessenger &MHiEvent, JetTreeMessenger &MJet, PFTreeMessenger &MPF, SkimTreeMessenger &MSkim, TriggerTreeMessenger &MHLT, double &PTHatMin, double &PTHatMax, GGTreeMessenger &MGG )
 {
 	TH1D HN("HN", "Raw event count", 1, 0, 1); 
 	
@@ -623,10 +727,12 @@ void DataAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TF
 	DataTree->SetName("PbPbTree");
 
 
-   	std::vector<Float_t> vHadronDistTree;
+   	std::vector<Float_t> vHadronDistTree, dRN, vpt, newdRN;
    	Float_t HalfPtMoment,DRSquareMoment, WidthMoment, MassMoment, SmallDRPT, ParticleCount, PTSquare, MyMoment;
    	Float_t Hadron[8]={0, 0, 0, 0, 0, 0, 0, 0};
 	Float_t HadronEta[8]={0, 0, 0, 0, 0, 0, 0, 0};
+	std::vector<Float_t> vID;
+	Float_t px,py,pz, newEta, newPhi, newdR;
 	//Tree branches
    	TBranch *HadDistData=DataTree->Branch("HadronDist", &vHadronDistTree);
    	TBranch *HalfPtData=DataTree->Branch("HalfPtMoment", &HalfPtMoment, "HalfPtMoment/F");
@@ -656,7 +762,11 @@ void DataAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TF
    	TBranch *HadronEta4Data=DataTree->Branch("HadronEta4", &HadronEta[7], "HadronEta4/F");
 
    	TBranch *MyMomentData=DataTree->Branch("MyMoment", &MyMoment, "MyMoment/F");
-
+	
+	TBranch *dRNData=DataTree->Branch("dRN", &dRN);
+	TBranch *ptData=DataTree->Branch("pt", &vpt);
+	TBranch *partIDData=DataTree->Branch("ID", &vID);
+	TBranch *newDRData=DataTree->Branch("newdRN", &newdRN);
 	//----centrality 
 	Float_t Centrality;
 
@@ -692,7 +802,7 @@ void DataAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TF
       	MPF.GetEntry(iE);
       	MSkim.GetEntry(iE);
       	MHLT.GetEntry(iE);	
-
+		MGG.GetEntry(iE);
       	int used[MPF.ID->size()];
       	for (int u=0; u<MPF.ID->size();u++){
 			used[u]=0;
@@ -714,33 +824,66 @@ void DataAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TF
 		for (int iJ=0;iJ<MJet.JetCount; iJ++)
 		{	
 			//Selection
-			if (MJet.JetPT[iJ]<=160 || abs(MJet.JetEta[iJ])>=1)
-		   		continue;
-		
+			//if (MJet.JetPT[iJ]<=100 || abs(MJet.JetEta[iJ])>=1)
+		   	//	continue;
+			px=0;
+			py=0;
+			pz=0; //this is enough to get the angles, no need for py
+			 //axis recalcualtion cycle
+			 for (unsigned int i=0; i!=MPF.ID->size(); i++){
+				 DR=GetDR(MPF.Eta->at(i), MPF.Phi->at(i), MJet.JetEta[iJ], MJet.JetPhi[iJ]);
+				   if (MPF.ID->at(i)>0 && MPF.ID->at(i)<6 && MJet.JetPT[iJ]>100 && abs(MJet.JetEta[iJ])<1){
+				   		if(DR<0.4 && used[i]==0)
+				 			dRN.push_back(DR);
+					}
+				 if (DR>=0.4 || used[i]==1)
+				 	continue;
+			
+				px+=MPF.PT->at(i)*cos(MPF.Phi->at(i));
+				py+=MPF.PT->at(i)*sin(MPF.Phi->at(i));
+				pz+=MPF.PT->at(i)*sinh(MPF.Eta->at(i));	
+			 }//end of axis recalculation
+			 newPhi=acos(px/sqrt(pow(px,2)+pow(py,2)));
+			 newEta=asinh(pz/sqrt(pow(px,2)+pow(py,2)));
+			px=0;
+			py=0;
+			pz=0;
 			for (unsigned int i=0; i!=MPF.ID->size(); i++){
-		   		DR=GetDR(MPF.Eta->at(i), MPF.Phi->at(i), MJet.JetEta[iJ], MJet.JetPhi[iJ]);
-		   		if (DR>=0.4 || used[i]==1)
-			 		continue;
+				 newdR=GetDR(newEta, newPhi, MPF.Eta->at(i), MPF.Phi->at(i));
+				  if (newdR<=0.4 && used[i]==0){
+					px+=MPF.PT->at(i)*cos(MPF.Phi->at(i));
+					py+=MPF.PT->at(i)*sin(MPF.Phi->at(i));
+					pz+=MPF.PT->at(i)*sinh(MPF.Eta->at(i));
+				  }
+			}//end of jet pt recalculation
+			if (sqrt(pow(px,2)+pow(py,2))<=100 || abs(newEta)>=1)
+		   		continue;
+			for (unsigned int i=0; i!=MPF.ID->size(); i++){
+		   		//DR=GetDR(MPF.Eta->at(i), MPF.Phi->at(i), MJet.JetEta[iJ], MJet.JetPhi[iJ]);
+				newdR=GetDR(newEta, newPhi, MPF.Eta->at(i), MPF.Phi->at(i));
+	
 		  		if (MPF.ID->at(i)>0 && MPF.ID->at(i)<6){
+		 			if (newdR>0.4 || used[i]==1)
+						continue;
 					DEta=MJet.JetEta[iJ]-MPF.Eta->at(i);
 			   		DPhi=MJet.JetPhi[iJ]-MPF.Phi->at(i);
 			   		if (DPhi<-M_PI) DPhi=DPhi+2*M_PI;
 			  		else if (DPhi>M_PI) DPhi=DPhi-2*M_PI;
 			   		used[i]=1;
 			   		indx=MPF.ID->at(i)-1;
-			   		PTFrac=MPF.PT->at(i)/MJet.JetPT[iJ];
-			   		DRFrac=DR/0.4;
-			
+			   		//PTFrac=MPF.PT->at(i)/MJet.JetPT[iJ];
+					PTFrac=MPF.PT->at(i)/sqrt(pow(px,2)+pow(py,2));
+			   		DRFrac=newdR/0.4;
+					vID.push_back(MPF.ID->at(i));
 					//filling DataMoments
 					for (int j=0;j<amX;j++){
 						for (int m=0;m<amY;m++){
-							if (y[m]<0 && DRFrac==0){				
+							if (y[m]<0 && DRFrac==0)			
 								continue;
-							}
 							DataMoment[j][m]+=pow(PTFrac,x[j])*pow(DRFrac,y[m]);
 						}
 					}//end of DataMoment filling
-					if (DR<PercentDR){
+					if (newdR<PercentDR){
 						PTRatio=PTRatio+PTFrac;
 				   	}
 					if (indx==4){
@@ -752,6 +895,8 @@ void DataAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TF
 								HadronEta[r-1]++;
 						}
 					}
+					newdRN.push_back(newdR);
+					vpt.push_back(MPF.PT->at(i));
 				} //end of ID if 
 			}//end of PF in jet cylcle
 
@@ -769,6 +914,10 @@ void DataAnalyzer(bool &IsPP, bool &IsPPHiReco, bool &IsPA, TFile *InputFile, TF
 
 			// Cleaning/Resetting
 			vHadronDistTree.clear();
+			dRN.clear();	
+			newdRN.clear();
+			vpt.clear();
+			vID.clear();
 			PTRatio=0;
 			for (int i=0; i<amX;i++){
 				for(int j=0; j<amY; j++){

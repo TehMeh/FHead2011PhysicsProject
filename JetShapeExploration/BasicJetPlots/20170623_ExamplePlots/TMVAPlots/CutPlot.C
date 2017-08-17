@@ -1,12 +1,12 @@
 {	//*SignifPlots.pdf
 	TCanvas C;
 
-	string outDir="./PlotsAA/160AA";
-	string inDir="../TMVAFactory/AAoutput/160AA";
-	string DataID="AA";
+	string outDir="./PlotsAAFinal/160AAF";
+	string inDir="../TMVAFactory/AAoutputFinal/160AAF";
+	string DataID="AA"; //No need for "160AA"
 
-	//string outDir="./PlotsPP/";
-	//string inDir="../TMVAFactory/PPoutput/";
+	//string outDir="./PlotsPPFinal/F";
+	//string inDir="../TMVAFactory/PPoutputFinal/F";
 	//string DataID="PP";
 
 	const int CatNum=5;
@@ -175,9 +175,7 @@
 				Histo->Draw();
 				curves.at(indx)=*Histo;
 				Histo->SetName("boya");
-
 				rocLegend.at(indx).AddEntry(&curves.at(indx),("ROC of "+VariableName[i]).c_str(), "l");
-				rocLegend.at(indx).Draw();
 			
 				C.cd(2);
 
@@ -232,6 +230,7 @@
 				textify.Draw();
 
 				C.cd(1);
+
 				Histo->Reset();
 				Histo->SetName("teh best histogram, that has ever lived");
 				Histo->SetBins(effS.at(indx).GetNbinsX(),0,1);
@@ -250,6 +249,7 @@
 				//Histo->Fill(effS.at(indx).GetBinContent(signif.at(indx).GetMaximumBin()), 1-effB.at(indx).GetBinContent(signif.at(indx).GetMaximumBin()));
 
 				Histo->Draw("same hist p");
+				rocLegend.at(indx).Draw();
 				if(counter==0 && (OnCount>1 || VarOnCount>1 || otherCatNum>1))
 					C.SaveAs((outDir+"SignifPlots.pdf(").c_str());
 				else if(counter==VarOnCount*OnCount*(otherCatNum-c)-1 && (OnCount>1 || VarOnCount>1 || otherCatNum>1) ){

@@ -31,13 +31,13 @@ struct Variable{
 	int cycles=1;
 };
 
-//string dataInput="../MyScaledResult/AA6DijetCymbal.root"; //or "../MyScaledResult/160AA6DijetCymbal.root"
-//string outDir="./AAoutput/AA";	//or ./AAoutput/160AA
-//string dataType="AA";	
-string JobName="TMVAJets";//or _160TMVAJets.root
-string dataInput="../MyScaledResult/PP6Dijet.root";
-string outDir="./PPoutput/";
-string dataType="";
+string dataInput="../MyScaledResultFinal/160AA6DijetCymbal.root"; //or "../MyScaledResult/160AA6DijetCymbal.root"
+string outDir="./AAoutputFinal/160AAF";	//or ./AAoutput/160AA
+string dataType="AA";	
+string JobName="_160TMVAJetsFinal";//or _160TMVAJets.root
+//string dataInput="../MyScaledResultFinal/PP6Dijet.root";
+//string outDir="./PPoutputFinal/F";
+//string dataType="";
 
 int main()
 {	int VarNum=10;
@@ -108,6 +108,15 @@ int main()
 		}			
 		if (dataType=="AA")
 		JetFactory->AddSpectator("Centrality", 'F');
+		JetFactory->AddSpectator("pt", 'F');
+		JetFactory->AddSpectator("dRN", 'F');
+		JetFactory->AddSpectator("ID", 'F');
+		JetFactory->AddSpectator("newdRN", 'F');
+		/*
+		JetFactory->AddSpectator("pubx", 'F');
+		JetFactory->AddSpectator("puCount", 'F');
+		JetFactory->AddSpectator("pu0", 'F');
+		*/
 		
 		JetFactory->PrepareTrainingAndTestTree(centrality[m],"nTrain_Signal=0:nTest_Signal=0:nTrain_Background=0:nTest_Background=0");
 
@@ -170,7 +179,15 @@ int main()
 			}	
 			if(dataType=="AA")
 			SingleFactory->AddSpectator("Centrality", 'F');
-	
+			SingleFactory->AddSpectator("pt", 'F');
+			SingleFactory->AddSpectator("dRN", 'F');
+			SingleFactory->AddSpectator("ID", 'F');
+			SingleFactory->AddSpectator("newdRN", 'F');
+			/*
+			SingleFactory->AddSpectator("pubx", 'F');
+			SingleFactory->AddSpectator("puCount", 'F');
+			SingleFactory->AddSpectator("pu0", 'F');
+			*/
 			SingleFactory->PrepareTrainingAndTestTree(centrality[m],"nTrain_Signal=0:nTest_Signal=0:nTrain_Background=0:nTest_Background=0");
 
 			SingleFactory->BookMethod(Types::kBDT, "BDT_DAB","!H:!V:NTrees=800:MinNodeSize=5%:MaxDepth=3:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:VarTransform=Decorrelate");

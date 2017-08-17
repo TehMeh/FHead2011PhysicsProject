@@ -2,13 +2,13 @@
 	//This script is different in a sense that it does not create separate plots for each centrality	
 	TCanvas C;
 
-	string outDir="./PlotsAA/160AA";
-	string inDir="../TMVAFactory/AAoutput/160AA";
+	string outDir="./PlotsAAFinal/160AAF";
+	string inDir="../TMVAFactory/AAoutputFinal/160AAF";
 	string DataID="AA";
 
-//	string outDir="./PlotsPP/";
-//	string inDir="../TMVAFactory/PPoutput/";
-//	string DataID="PP";
+	//string outDir="./PlotsPPFinal/F";
+	//string inDir="../TMVAFactory/PPoutputFinal/F";
+	//string DataID="PP";
 
 	gStyle->SetOptStat(0);	
 

@@ -6,12 +6,14 @@
 
    gStyle->SetOptStat(0);
 
-	//string outDir="./PlotsPP/";
-	//string inDir="../TMVAFactory/PPoutput/";
+	//string outDir="./PlotsPPFinal/F";
+	//string inDir="../TMVAFactory/PPoutputFinal/F";
 	//string DataName="PP";
-	string reader="../TMVAReader/";
-	string outDir="./PlotsAA/AA";
-	string inDir="../TMVAFactory/AAoutput/AA";
+
+	string reader="../TMVAReader/F160";
+
+	string outDir="./PlotsAAFinal/160AAF";
+	string inDir="../TMVAFactory/AAoutputFinal/160AAF";
 	string DataName="PbPb";
 
 	const int CatNum=5;

@@ -3,14 +3,14 @@
 
 	TCanvas C;
 
-	string outDir="./PlotsAA/160AA"; // ./PlotsAA/160AA or ./PlotsAA/AA
-	string inDir="../TMVAFactory/AAoutput/160AA";
+	string outDir="./PlotsAAFinal/160AAF"; // ./PlotsAA/160AA or ./PlotsAA/AA
+	string inDir="../TMVAFactory/AAoutputFinal/160AAF";
 	string DataID="PbPb";
 
-	string reader="../TMVAReader/160";  //PPweightAA/PPweight"; // or "...reader/160" or "....reader/". This linne is never commented.
+	string reader="../TMVAReader/F160";  //PPweightAA/PPweight"; // or "...reader/160" or "....reader/". This line is never commented.
 
-	//string outDir="./PlotsPP/";
-	//string inDir="../TMVAFactory/PPoutput/";
+	//string outDir="./PlotsPPFinal/F";
+	//string inDir="../TMVAFactory/PPoutputFinal/F";
 	//string DataID="PP";
 
 	const int CatNum=5;
